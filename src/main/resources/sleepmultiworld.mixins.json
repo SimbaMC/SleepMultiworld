@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "simba.sleepmultiworld.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ServerLevel_tick_mixin",
+    "setDayTime_mixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}
