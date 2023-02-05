@@ -20,8 +20,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
 mixin {
-    add sourceSets.main, "sleepmultiworld.refmap.json"
-    config "sleepmultiworld.mixins.json"
+    add sourceSets.main, "mixins.sleepmultiworld.refmap.json"
 }
 
 version = '1.0'
