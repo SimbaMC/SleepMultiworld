@@ -24,7 +24,7 @@ mixin {
     config "mixins.sleepmultiworld.json"
 }
 
-version = '1.0'
+version = '1.1'
 group = 'simba.sleepmultiworld' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'sleepmultiworld'
 

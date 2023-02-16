@@ -16,11 +16,27 @@ public class ServerLevel_tick_mixin {
     private ServerLevelData serverLevelData;
 
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;setDayTime(J)V"))
-    void setDayTimemixin(ServerLevel instance, long p_8616_){
-        if (serverLevelData instanceof DerivedLevelData) {
-            ((DerivedLevelDataInterface) serverLevelData).getWrapped().setDayTime(p_8616_);
+    void setDayTimeMixin(ServerLevel instance, long p_8616_){
+        if (this.serverLevelData instanceof DerivedLevelData) {
+            ((DerivedLevelDataInterface) this.serverLevelData).getWrapped().setDayTime(p_8616_);
         } else {
-            serverLevelData.setDayTime(p_8616_);
+            this.serverLevelData.setDayTime(p_8616_);
+        }
+    }
+
+    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;resetWeatherCycle()V"))
+    void resetWeatherCycleMixin(ServerLevel instance){
+        if (this.serverLevelData instanceof DerivedLevelData) {
+            ServerLevelData wrappedLevel = ((DerivedLevelDataInterface) this.serverLevelData).getWrapped();
+            wrappedLevel.setRainTime(0);
+            wrappedLevel.setRaining(false);
+            wrappedLevel.setThunderTime(0);
+            wrappedLevel.setThundering(false);
+        } else {
+            this.serverLevelData.setRainTime(0);
+            this.serverLevelData.setRaining(false);
+            this.serverLevelData.setThunderTime(0);
+            this.serverLevelData.setThundering(false);
         }
     }
 }
