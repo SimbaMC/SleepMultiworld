@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "ServerLevel_tick_mixin",
-    "setDayTime_mixin"
+    "setDayTime_mixin",
+    "wayStoneXp_mixin"
   ],
   "client": [
   ],

@@ -166,6 +166,7 @@ dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly fg.deobf("curse.maven:waystones-245755:3830849")
     runtimeOnly fg.deobf("curse.maven:waystones-245755:3830849")
+    compileOnly fg.deobf("curse.maven:balms-531761:4361371")
     runtimeOnly fg.deobf("curse.maven:balms-531761:4361371")
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
