@@ -1,7 +1,7 @@
 package simba.sleepmultiworld.mixins;
 
 import net.blay09.mods.waystones.api.IWaystone;
-import net.blay09.mods.waystones.config.WaystonesConfigData;
+import net.blay09.mods.waystones.config.WaystonesConfig;
 import net.blay09.mods.waystones.core.PlayerWaystoneManager;
 import net.blay09.mods.waystones.core.WarpMode;
 import net.blay09.mods.waystones.core.WaystoneTeleportContext;
@@ -9,56 +9,76 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import org.slf4j.LoggerFactory;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.Overwrite;
+
+import java.util.Objects;
 
 @Mixin(PlayerWaystoneManager.class)
 public class wayStoneXp_mixin {
 
-    @Redirect(
-            method = "getExperienceLevelCost(Lnet/minecraft/world/entity/Entity;Lnet/blay09/mods/waystones/api/IWaystone;Lnet/blay09/mods/waystones/core/WarpMode;Lnet/blay09/mods/waystones/core/WaystoneTeleportContext;)I",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/blay09/mods/waystones/config/WaystonesConfigData;dimensionalWarpXpCost()I",
-                    remap = false
-            ),
-            require = 1,
-            allow = 1,
-            remap = false
-    )
-    private static int coordinate_scale_addon_mixin(WaystonesConfigData instance, Entity entity, IWaystone waystone, WarpMode warpMode, WaystoneTeleportContext context) {
-        int dimensionalWarpXpCost = instance.dimensionalWarpXpCost();
-        double xpLevelCost = 0;
-        double minimumXpCost = instance.minimumXpCost();
-        double maximumXpCost = instance.maximumXpCost();
-        double targetWorld_coordinate;
-        if (entity instanceof ServerPlayer player) {
-            targetWorld_coordinate = player.getServer().getLevel(waystone.getDimension()).dimensionType().coordinateScale();
-        } else {
+    /**
+     * @author Simba
+     * @reason Rewrite for support coordinateScale
+     */
+    @Overwrite(remap = false)
+    public static int getExperienceLevelCost(Entity entity, IWaystone waystone, WarpMode warpMode, WaystoneTeleportContext context){
+        if (!(entity instanceof Player player)) {
+            return 0;
+        }
 
+        if (context.getFromWaystone() != null && waystone.getWaystoneUid().equals(context.getFromWaystone().getWaystoneUid())) {
+            return 0;
+        }
+
+        boolean enableXPCost = !player.getAbilities().instabuild;
+
+        int xpForLeashed = WaystonesConfig.getActive().xpCostPerLeashed() * context.getLeashedEntities().size();
+
+        double xpCostMultiplier = warpMode.getXpCostMultiplier();
+        if (waystone.isGlobal()) {
+            xpCostMultiplier *= WaystonesConfig.getActive().globalWaystoneXpCostMultiplier();
+        }
+
+        // Insert
+        double targetWorld_coordinate;
+        if (entity instanceof ServerPlayer serverplayer) {
+            try {
+                targetWorld_coordinate = Objects.requireNonNull(Objects.requireNonNull(serverplayer.getServer()).getLevel(waystone.getDimension())).dimensionType().coordinateScale();
+            } catch (NullPointerException e) {
+                targetWorld_coordinate = 1;
+            }
+        } else {
             targetWorld_coordinate = switch (waystone.getDimension().location().toString()) {
                 case "minecraft:the_nether", "0w0:hell" -> 8;
                 default -> 1;
             };
         }
         double currentWorld_coordinate = entity.getLevel().dimensionType().coordinateScale();
-        BlockPos target_pos = waystone.getPos();
+        // End Insert
+
+        BlockPos pos = waystone.getPos();
         double dist_coordinate = Math.sqrt(
-                Math.pow(entity.getX() * currentWorld_coordinate - target_pos.getX() * targetWorld_coordinate, 2)
-                        + Math.pow(entity.getY() - target_pos.getY(), 2)
-                        + Math.pow(entity.getZ() * currentWorld_coordinate - target_pos.getZ() * targetWorld_coordinate, 2)
+                Math.pow(entity.getX() * currentWorld_coordinate - pos.getX() * targetWorld_coordinate, 2)
+                        + Math.pow(entity.getY() - pos.getY(), 2)
+                        + Math.pow(entity.getZ() * currentWorld_coordinate - pos.getZ() * targetWorld_coordinate, 2)
         );
-        if (instance.blocksPerXPLevel() > 0) {
-            xpLevelCost = Mth.clamp(dist_coordinate / (double) ((float) instance.blocksPerXPLevel()), minimumXpCost, maximumXpCost);
-            if (instance.inverseXpCost()) {
+        final double minimumXpCost = WaystonesConfig.getActive().minimumXpCost();
+        final double maximumXpCost = WaystonesConfig.getActive().maximumXpCost();
+        double xpLevelCost = 0;
+        if (WaystonesConfig.getActive().blocksPerXPLevel() > 0) {
+            xpLevelCost += dist_coordinate / (float) WaystonesConfig.getActive().blocksPerXPLevel();
+            if (WaystonesConfig.getActive().inverseXpCost()) {
                 xpLevelCost = maximumXpCost - xpLevelCost;
             }
         }
-        final org.slf4j.Logger LOGGER = LoggerFactory.getLogger("Simba");
-        LOGGER.warn(String.valueOf((int)Math.round(dimensionalWarpXpCost + xpLevelCost)));
-        return (int)Math.round(dimensionalWarpXpCost + xpLevelCost);
+        if (waystone.getDimension() != player.level.dimension()) {
+            int dimensionalWarpXpCost = WaystonesConfig.getActive().dimensionalWarpXpCost();
+            xpLevelCost += dimensionalWarpXpCost;
+        }
+        xpLevelCost = Mth.clamp(xpLevelCost, minimumXpCost, maximumXpCost);
+        return enableXPCost ? (int) Math.round((xpLevelCost + xpForLeashed) * xpCostMultiplier) : 0;
     }
 
 }
